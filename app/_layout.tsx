@@ -1,34 +1,41 @@
-import AuthProvider, { useAuth } from '@/components/contex/auth-context';
-import { Redirect, Stack, usePathname } from 'expo-router'; // Importar usePathname
-import { StatusBar } from 'expo-status-bar';
-import React from 'react';
-import 'react-native-reanimated';
+import { AuthProvider, useAuth } from '@/components/contex/auth-context';
+import { TaskProvider } from '@/components/contex/task-context';
+import { Slot, useRouter, useSegments } from 'expo-router';
+import { useEffect } from 'react';
+import { ActivityIndicator, View } from 'react-native';
+
+const InitialLayout = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    if (isAuthenticated && segments[0] === 'login') {
+      router.replace('/(tabs)');
+    } else if (!isAuthenticated && segments[0] !== 'login') {
+      router.replace('/login');
+    }
+  }, [isAuthenticated, isLoading, segments]);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </View>
+    );
+  }
+
+  return <Slot />;
+};
 
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <AuthFlow /> 
-      <StatusBar style="auto" />
+      <TaskProvider>
+        <InitialLayout />
+      </TaskProvider>
     </AuthProvider>
-  );
-}
-
-function AuthFlow() {
-  const { isAuthenticated } = useAuth();
-  const pathname = usePathname(); // Obtenemos la ruta actual
-  
-  // Condición de redirección mejorada: 
-  // Redirige SÓLO si NO está autenticado Y NO está ya en el login
-  if (!isAuthenticated && pathname !== '/login') {
-    return <Redirect href="/login" />;
-  }
-  
-  return (
-    <Stack>
-      {/* Si está autenticado o ya estamos en el login */}
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="login" options={{ title: 'Login', headerShown: false }} />
-      <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-    </Stack>
   );
 }
